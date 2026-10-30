@@ -1,0 +1,11 @@
+{
+  "nome": "Fulano",
+  "admissao": "2021-03-15",
+  "salarioFixo": 6000,
+  "adicionaisFixos": 0,
+  "mediaVariaveis": 800,
+  "dependentesIR": 0,
+  "fgts": { "saldo": 25000, "dataReferencia": "2026-10-01" },
+  "ferias": { "periodosGozados": 4 },
+  "seguroDesemprego": { "solicitacoesAnteriores": 0 }
+}

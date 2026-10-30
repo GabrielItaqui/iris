@@ -1,0 +1,65 @@
+name: Publicar Iris
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Testar cálculo
+        run: npm run teste
+
+      - name: Conferir secrets
+        env:
+          IRIS_DADOS: ${{ secrets.IRIS_DADOS }}
+          IRIS_SENHA: ${{ secrets.IRIS_SENHA }}
+        run: |
+          if [ -z "$IRIS_DADOS" ]; then echo "::error::Secret IRIS_DADOS não configurado"; exit 1; fi
+          if [ ${#IRIS_SENHA} -lt 12 ]; then echo "::error::Secret IRIS_SENHA ausente ou com menos de 12 caracteres"; exit 1; fi
+
+      - name: Montar página
+        env:
+          IRIS_DADOS: ${{ secrets.IRIS_DADOS }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npm run build
+
+      - name: Criptografar com a senha
+        env:
+          STATICRYPT_PASSWORD: ${{ secrets.IRIS_SENHA }}
+        run: npm run criptografar
+
+      - name: Garantir que nada sai sem criptografia
+        run: |
+          rm -rf dist
+          if grep -q "salarioFixo" site/index.html; then echo "::error::Página não criptografada"; exit 1; fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

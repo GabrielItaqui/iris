@@ -1,0 +1,17 @@
+{
+  "name": "iris",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "teste": "node scripts/teste.mjs",
+    "build": "node scripts/build.mjs",
+    "criptografar": "staticrypt dist/index.html -d site --short --remember 30 --template-title \"Iris\" --template-instructions \"Olá! Digite sua senha para entrar.\" --template-button \"Entrar\" --template-placeholder \"Senha\" --template-remember \"Lembrar por 30 dias\" --template-error \"Senha incorreta\" --template-toggle-show \"Mostrar senha\" --template-toggle-hide \"Ocultar senha\" --template-color-primary \"#7c5cff\" --template-color-secondary \"#0f0d1a\""
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "staticrypt": "^3.5.4"
+  }
+}
