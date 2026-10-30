@@ -44,7 +44,6 @@ jobs:
       - name: Montar página
         env:
           IRIS_DADOS: ${{ secrets.IRIS_DADOS }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: npm run build
 
       - name: Criptografar com a senha

@@ -1,9 +1,11 @@
 # Iris
 
-Assistente pessoal com um menu de módulos e um chat (Claude) que consulta esses módulos.
+Assistente pessoal com um menu de módulos e um chat que consulta esses módulos.
 Primeiro módulo: **Rescisão**, que mostra quanto eu receberia se saísse da empresa hoje.
 
 - Os cálculos rodam no navegador com a data do dia: nada precisa ser atualizado.
+- O chat não usa IA nem API paga: ele entende as perguntas por palavras-chave e datas
+  (`src/iris/linguagem.js`) e cada módulo monta a resposta com o próprio cálculo.
 - Os dados pessoais **não ficam no código**. Eles ficam nos Secrets do GitHub.
 - O GitHub Actions monta a página, criptografa com a senha (StatiCrypt, AES-256) e publica no GitHub Pages.
 
@@ -13,7 +15,6 @@ Primeiro módulo: **Rescisão**, que mostra quanto eu receberia se saísse da em
 |---|---|
 | `IRIS_DADOS` | JSON com os dados fixos (modelo em `dados.exemplo.json`) |
 | `IRIS_SENHA` | Senha de acesso à página (mínimo de 12 caracteres; use uma frase longa) |
-| `ANTHROPIC_API_KEY` | Chave da API do Claude para o chat. Crie uma chave só para a Iris e defina um limite de gasto no console da Anthropic |
 
 ### Campos de `IRIS_DADOS`
 
@@ -43,10 +44,12 @@ npm run build                      # gera dist/index.html (sem criptografia, nã
 ## Criar um novo módulo
 
 1. Copie `src/modulos/rescisao/` para uma pasta nova.
-2. Exporte `{ id, nome, icone, renderizar, ferramentas, executar }`.
+2. Exporte `{ id, nome, icone, renderizar, responder, exemplos }`.
+   `responder(texto, dados, contexto)` recebe a pergunta já normalizada (minúsculas, sem acentos)
+   e devolve o texto da resposta, ou `null` se a pergunta não for com esse módulo.
 3. Adicione o módulo em `src/modulos/index.js`.
 
-Ele aparece no menu e a Iris passa a poder consultá-lo no chat.
+Ele aparece no menu e a Iris passa a responder sobre ele no chat.
 
 ## Tabelas legais
 

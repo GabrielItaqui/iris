@@ -4,7 +4,6 @@
 //   1. variável de ambiente IRIS_DADOS (JSON) — usada pelo GitHub Actions
 //   2. dados.json na raiz (local, fora do git)
 //   3. dados.exemplo.json
-// Chave da API: variável de ambiente ANTHROPIC_API_KEY (opcional; sem ela o chat fica desligado).
 //
 // ATENÇÃO: dist/index.html sai SEM criptografia. Só publique a pasta site/,
 // gerada depois por `npm run criptografar`.
@@ -35,7 +34,6 @@ const resultado = await build({
   write: false,
   define: {
     __IRIS_DADOS__: JSON.stringify(dados),
-    __IRIS_API_KEY__: JSON.stringify(process.env.ANTHROPIC_API_KEY ?? ""),
   },
 });
 
@@ -47,4 +45,4 @@ const html = readFileSync("src/index.html", "utf8")
 
 mkdirSync("dist", { recursive: true });
 writeFileSync("dist/index.html", html);
-console.log(`dist/index.html gerado (dados: ${origem}, chat: ${process.env.ANTHROPIC_API_KEY ? "ligado" : "desligado"})`);
+console.log(`dist/index.html gerado (dados: ${origem})`);

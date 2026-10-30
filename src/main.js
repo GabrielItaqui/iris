@@ -1,11 +1,10 @@
 // Ponto de entrada da Iris: menu de módulos + chat.
-// __IRIS_DADOS__ e __IRIS_API_KEY__ são injetados pelo build (scripts/build.mjs).
+// __IRIS_DADOS__ é injetado pelo build (scripts/build.mjs).
 
 import { MODULOS } from "./modulos/index.js";
 import { criarChat } from "./iris/chat.js";
 
 const dados = __IRIS_DADOS__;
-const apiKey = __IRIS_API_KEY__;
 
 const menu = document.querySelector("#menu");
 const conteudo = document.querySelector("#conteudo");
@@ -33,7 +32,7 @@ menu.addEventListener("click", (e) => {
 
 // ---------- chat ----------
 
-let enviar = null;
+const enviar = criarChat(dados);
 const historico = [];
 
 function escapar(texto) {
@@ -69,8 +68,8 @@ function renderizarChat(container) {
     return div;
   }
 
-  if (!historico.length && apiKey) {
-    const sugestoes = ["Quanto eu recebo se for demitido hoje?", "E se eu pedir demissão?", "Quanto teria em 1º de março?"];
+  if (!historico.length) {
+    const sugestoes = MODULOS.flatMap((m) => m.exemplos ?? []);
     lista.innerHTML = `
       <div class="boas-vindas">
         <p>Oi${dados.nome ? `, ${escapar(dados.nome)}` : ""}! O que você quer saber?</p>
@@ -82,30 +81,16 @@ function renderizarChat(container) {
   }
   historico.forEach(([autor, texto]) => mostrar(autor, texto));
 
-  if (!apiKey) {
-    mostrar("iris", "Ainda não tenho uma chave da API configurada. Cadastre o secret ANTHROPIC_API_KEY no GitHub para eu poder conversar.");
-    campo.disabled = true;
-    return;
-  }
-  enviar ??= criarChat(dados, apiKey);
-
-  form.addEventListener("submit", async (e) => {
+  form.addEventListener("submit", (e) => {
     e.preventDefault();
     const texto = campo.value.trim();
     if (!texto) return;
     lista.querySelector(".boas-vindas")?.remove();
     campo.value = "";
-    campo.disabled = true;
-    historico.push(["eu", texto]);
+    const resposta = enviar(texto);
+    historico.push(["eu", texto], ["iris", resposta]);
     mostrar("eu", texto);
-    const pensando = mostrar("iris pensando", "Calculando…");
-
-    const resposta = await enviar(texto);
-    pensando.remove();
-    historico.push(["iris", resposta]);
     mostrar("iris", resposta);
-    campo.disabled = false;
-    campo.focus();
   });
   campo.focus();
 }
