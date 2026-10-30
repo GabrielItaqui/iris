@@ -4,3 +4,6 @@ site/
 dados.json
 .staticrypt.json
 .env
+iris-skill.zip
+skill/iris/dados.json
+__pycache__/

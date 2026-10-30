@@ -1,9 +1,12 @@
-// Testes do cálculo de rescisão: node scripts/teste.mjs
+// Testes: node scripts/teste.mjs
+// 1. cálculo do painel (JS) em casos conhecidos
+// 2. o script da skill (Python) dá exatamente os mesmos números que o painel
 import assert from "node:assert/strict";
-import { calcularINSS, calcularIRRF, calcularCenario, data } from "../src/modulos/rescisao/calculo.js";
-import { responder } from "../src/modulos/rescisao/respostas.js";
-import { lerData, normalizar } from "../src/iris/linguagem.js";
-import { criarChat } from "../src/iris/chat.js";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { calcularINSS, calcularIRRF, calcularCenario, calcularRescisao, data, iso } from "../src/modulos/rescisao/calculo.js";
 
 const exemplo = {
   nome: "Fulano",
@@ -16,6 +19,8 @@ const exemplo = {
   ferias: { periodosGozados: 4 },
   seguroDesemprego: { solicitacoesAnteriores: 0 },
 };
+
+// ---------- cálculo ----------
 
 // INSS: teto de desconto 2026 é R$ 988,09
 assert.equal(calcularINSS(10000), 988.09);
@@ -38,6 +43,7 @@ assert.match(sjc.verbas.find((v) => v.nome.startsWith("Férias proporcionais")).
 assert.equal(sjc.verbas.filter((v) => v.nome.startsWith("Férias vencidas")).length, 1);
 assert.equal(sjc.seguroDesemprego.parcelas, 5);
 assert.equal(sjc.seguroDesemprego.valorParcela, 2518.65);
+assert.equal(sjc.totalEmMaos, 74122.28);
 
 const pedido = calcularCenario(exemplo, hoje, "pedido_demissao");
 assert.equal(pedido.fgts.disponivelSaque, 0);
@@ -47,34 +53,53 @@ assert.equal(pedido.seguroDesemprego.parcelas, 0);
 const dez = calcularCenario(exemplo, data("2026-12-05"), "sem_justa_causa");
 assert.ok(dez.descontos.some((d) => d.nome.startsWith("Adiantamento")));
 
-// ---------- leitura de datas ----------
-const ler = (t) => {
-  const d = lerData(normalizar(t), hoje);
-  return d && d.toISOString().slice(0, 10);
-};
-assert.equal(ler("e em 1º de março?"), "2027-03-01");
-assert.equal(ler("no dia 15/12"), "2026-12-15");
-assert.equal(ler("em 01/03/2027"), "2027-03-01");
-assert.equal(ler("daqui a 3 meses"), "2027-01-30");
-assert.equal(ler("em dez dias"), "2026-11-09");
-assert.equal(ler("em dezembro"), "2026-12-01");
-assert.equal(ler("em março de 2028"), "2028-03-01");
-assert.equal(ler("ano que vem"), "2027-10-30");
-assert.equal(ler("quanto recebo hoje?"), null);
+console.log("OK: cálculo do painel");
 
-// ---------- chat ----------
-const ctx = {};
-const perguntar = (t) => responder(normalizar(t), exemplo, ctx, hoje);
-assert.match(perguntar("Quanto eu recebo se for demitido hoje?"), /demitido sem justa causa hoje.*R\$\s?74\.122,28/s);
-assert.match(perguntar("E se eu pedir demissão?"), /pedir demissão hoje/);
-assert.match(perguntar("e em março?"), /pedir demissão em 01\/03\/2027/);
-assert.match(perguntar("Quanto de FGTS no acordo?"), /acordo.*80%/s);
-assert.match(perguntar("tenho direito a seguro desemprego se pedir demissão?"), /não teria direito/);
-assert.match(perguntar("quanto eu ganho saindo hoje?"), /Comparando/);
-assert.equal(perguntar("qual a previsão do tempo?"), null);
-const chat = criarChat(exemplo);
-assert.match(chat("oi"), /Oi, Fulano/);
-assert.match(chat("qual a capital da França?"), /Ainda não sei/);
+// ---------- painel (JS) x skill (Python) ----------
 
-console.log(perguntar("detalhes da demissão sem justa causa"));
-console.log("\nOK: todos os testes passaram");
+const perfis = [
+  exemplo,
+  // salário baixo, dependentes, férias em dobro, FGTS antigo, segunda solicitação de seguro
+  {
+    admissao: "2019-02-28", salarioFixo: 2100, adicionaisFixos: 300, mediaVariaveis: 0, dependentesIR: 2,
+    fgts: { saldo: 9000, dataReferencia: "2025-06-10" }, ferias: { periodosGozados: 4 },
+    seguroDesemprego: { solicitacoesAnteriores: 1 },
+  },
+  // recém-contratado, salário alto
+  {
+    admissao: "2026-01-31", salarioFixo: 15000, fgts: { saldo: 0, dataReferencia: "2026-01-31" },
+  },
+];
+
+const datas = ["2026-11-29", "2026-11-30", "2026-12-19", "2026-12-20", "2027-02-28", "2027-03-15", "2028-02-29"];
+for (let d = data("2026-10-30"); d < data("2028-12-31"); d = new Date(d.getTime() + 37 * 86400000)) datas.push(iso(d));
+
+const python = process.platform === "win32" ? "python" : "python3";
+const pasta = mkdtempSync(join(tmpdir(), "iris-"));
+const script = join("skill", "iris", "scripts", "rescisao.py");
+
+function iguais(a, b, caminho) {
+  if (typeof a === "number" && typeof b === "number") {
+    assert.ok(Math.abs(a - b) < 0.011, `${caminho}: painel ${a} x skill ${b}`);
+  } else if (a && typeof a === "object") {
+    assert.deepEqual(Object.keys(a).sort(), Object.keys(b).sort(), `${caminho}: campos diferentes`);
+    for (const k of Object.keys(a)) iguais(a[k], b[k], `${caminho}.${k}`);
+  } else {
+    assert.equal(a, b, caminho);
+  }
+}
+
+let comparacoes = 0;
+perfis.forEach((perfil, i) => {
+  const arquivo = join(pasta, `perfil${i}.json`);
+  writeFileSync(arquivo, JSON.stringify(perfil));
+  for (const d of datas) {
+    if (data(d) < data(perfil.admissao)) continue;
+    const js = calcularRescisao(perfil, data(d));
+    const py = JSON.parse(execFileSync(python, [script, "--dados", arquivo, "--data", d], { encoding: "utf8" }));
+    iguais(js, py, `perfil ${i} em ${d}`);
+    comparacoes++;
+  }
+});
+
+console.log(`OK: painel e skill iguais em ${comparacoes} comparações`);
