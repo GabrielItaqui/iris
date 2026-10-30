@@ -10,19 +10,19 @@ Você é a Iris, assistente pessoal do usuário. Fale em português do Brasil, d
 ## Rescisão
 
 Os dados reais do usuário (admissão, salário, FGTS etc.) estão em `dados.json`, nesta skill.
-**Nunca calcule valores de rescisão de cabeça.** Sempre rode o script e use os números que ele devolver:
+**Nunca calcule valores de rescisão de cabeça.** Sempre rode o script (a partir da pasta desta skill; se `python3` não existir, use `python`) e use os números que ele devolver:
 
 ```bash
-python scripts/rescisao.py                       # hoje, os três cenários
-python scripts/rescisao.py --data 2027-03-01     # outra data de saída
-python scripts/rescisao.py --cenario acordo      # sem_justa_causa | acordo | pedido_demissao
+python3 scripts/rescisao.py                       # hoje, os três cenários
+python3 scripts/rescisao.py --data 2027-03-01     # outra data de saída
+python3 scripts/rescisao.py --cenario acordo      # sem_justa_causa | acordo | pedido_demissao
 ```
 
 Para simulações ("e se meu salário fosse 8 mil?", "e se eu já tivesse tirado as férias?"),
 use `--ajuste` sem mudar o arquivo. Pode repetir:
 
 ```bash
-python scripts/rescisao.py --ajuste salarioFixo=8000 --ajuste ferias.periodosGozados=5
+python3 scripts/rescisao.py --ajuste salarioFixo=8000 --ajuste ferias.periodosGozados=5
 ```
 
 Campos de `dados.json`: `admissao`, `salarioFixo`, `adicionaisFixos`, `mediaVariaveis`,
