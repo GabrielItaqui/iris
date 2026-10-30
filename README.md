@@ -28,6 +28,9 @@ Duas partes que usam o mesmo cálculo:
 python scripts/empacotar_skill.py   # gera iris-skill.zip com o seu dados.json
 ```
 
+Opcional: crie `contexto.md` na raiz com quem você é e como quer ser tratado. Ele entra no zip,
+a Iris lê antes de responder, e também fica fora do git.
+
 No Claude: **Configurações → Capacidades → Skills → Enviar skill** e escolha `iris-skill.zip`.
 O zip tem seus dados: não compartilhe e não suba no git (já está no `.gitignore`).
 
